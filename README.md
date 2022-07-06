@@ -16,7 +16,7 @@ Our Project is based on the open-source project [ChameleonMini RevG](/../../../.
          - Need to manually download and view
          - Open [Doc/Doxyfile](Doc/Doxyfile) and then in application `Show HTML Output`
    - Documentation (emsec): 
-      - Doxygen: **[Here](https://rawgit.com/emsec/ChameleonMini/master/Doc/Doxygen/html)**
+      - Doxygen: **[Here](https://rawgit.com/emsec/ChameleonMini/master/Doc/Doxygen/html/_page__getting_started.html)**
       - Source: **[Here](/../../../../emsec/ChameleonMini/tree/master/Doc)**
 - Tools:
    - Phone APP:
