@@ -292,7 +292,7 @@ static uint8_t AccessAddress;
 static uint16_t CardATQAValue;
 static uint8_t CardSAKValue;
 static bool FromHalt = false;
-static bool DetectionMode = false;
+bool DetectionMode = false;
 
 #define BYTE_SWAP(x) (((uint8_t)(x)>>4)|((uint8_t)(x)<<4))
 #define NO_ACCESS 0x07
@@ -401,7 +401,7 @@ extern uint8_t bUidMode;                // Magic card mode switch
 static uint16_t DetectionLogPtr = FRAM_DETECTION_DATA_ADDR;
 static uint8_t EEMEM LogDetectionValid = false;
 
-static void DetectionLogToFlash(uint8_t Entry, const void *Data, uint8_t Length) {
+void DetectionLogToFlash(uint8_t Entry, const void *Data, uint8_t Length) {
     if (!DetectionMode)
         return;
 
@@ -1025,7 +1025,7 @@ uint16_t MifareClassicAppProcess(uint8_t *Buffer, uint16_t BitCount) {
 						State = STATE_HALT;
 						Buffer[0] = NAK_NOT_AUTHED ^ Crypto1Nibble();
 						return ACK_NAK_FRAME_SIZE;
-					} 
+					}
 					else {
 						DetectionLogToFlash(LOG_INFO_APP_CMD_WRITE, Buffer, 2);
 						/* Write command. Store the address and prepare for the upcoming data.

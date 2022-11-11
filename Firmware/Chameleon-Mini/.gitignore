@@ -1,8 +1,10 @@
-/Chameleon-Mini.eep
-/Chameleon-Mini.hex
-/Chameleon-Mini.elf
-/Chameleon-Mini.map
-/Chameleon-Mini.bin
-/Chameleon-Mini.lss
-/Chameleon-Mini.sym
+/Chameleon-*.eep
+/Chameleon-*.hex
+/Chameleon-*.elf
+/Chameleon-*.map
+/Chameleon-*.bin
+/Chameleon-*.lss
+/Chameleon-*.sym
 /Bin/
+dfu-programmer
+dfu-programmer.exe

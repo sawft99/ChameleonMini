@@ -69,6 +69,10 @@ static const MapEntryType PROGMEM ConfigurationMap[] = {
 #ifdef CONFIG_EM4233_SUPPORT
     { .Id = CONFIG_EM4233,	.Text = "EM4233" },
 #endif
+#ifdef CONFIG_ICLASS_SUPPORT
+    { .Id = CONFIG_ICLASS,	.Text = "ICLASS" },
+    { .Id = CONFIG_ICLASS_DETECTION,	.Text = "ICLASS_DETECTION" },
+#endif
 };
 
 /* Include all Codecs and Applications */
@@ -497,6 +501,40 @@ static const PROGMEM ConfigurationType ConfigurationTable[] = {
         .MemorySize = NTAG215_MEM_SIZE,
         .ReadOnly = false,
         .TagFamily = TAG_FAMILY_ISO14443A
+    },
+#endif
+#ifdef CONFIG_ICLASS_SUPPORT
+    [CONFIG_ICLASS] = {
+        .CodecInitFunc = ISO15693CodecInit,
+        .CodecDeInitFunc = ISO15693CodecDeInit,
+        .CodecTaskFunc = ISO15693CodecTask,
+        .ApplicationInitFunc = IClassAppInit,
+        .ApplicationResetFunc = IClassAppReset,
+        .ApplicationTaskFunc = ApplicationTaskDummy,
+        .ApplicationTickFunc = ApplicationTickDummy,
+        .ApplicationProcessFunc = IClassAppProcess,
+        .ApplicationGetUidFunc = IClassGetCsn,
+        .ApplicationSetUidFunc = IClassSetCsn,
+        .UidSize = ICLASS_CSN_SIZE,
+        .MemorySize = ICLASS_MEM_SIZE,
+        .ReadOnly = false,
+        .TagFamily = TAG_FAMILY_ISO15693_ICLASS
+    },
+    [CONFIG_ICLASS_DETECTION] = {
+        .CodecInitFunc = ISO15693CodecInit,
+        .CodecDeInitFunc = ISO15693CodecDeInit,
+        .CodecTaskFunc = ISO15693CodecTask,
+        .ApplicationInitFunc = IClassDetectionInit,
+        .ApplicationResetFunc = IClassAppReset,
+        .ApplicationTaskFunc = ApplicationTaskDummy,
+        .ApplicationTickFunc = ApplicationTickDummy,
+        .ApplicationProcessFunc = IClassAppProcess,
+        .ApplicationGetUidFunc = IClassGetCsn,
+        .ApplicationSetUidFunc = ApplicationSetUidDummy,
+        .UidSize = ICLASS_CSN_SIZE,
+        .MemorySize = ICLASS_MEM_SIZE,
+        .ReadOnly = true,
+        .TagFamily = TAG_FAMILY_ISO15693_ICLASS
     },
 #endif
 };

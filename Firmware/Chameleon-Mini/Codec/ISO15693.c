@@ -121,7 +121,7 @@ ISR_SHARED isr_ISO15693_CODEC_DEMOD_IN_INT0_VECT(void) {
  */
 INLINE void ISO15693_EOC(void) {
     /* Set bitrate required by the reader on SOF for our following response */
-    if (CodecBuffer[0] & REQ_DATARATE_HIGH) {
+    if (CodecBuffer[0] & REQ_DATARATE_HIGH || ActiveConfiguration.TagFamily == TAG_FAMILY_ISO15693_ICLASS) {
         BitRate1 = 256;
         BitRate2 = 252; /* If single subcarrier mode is requested, BitRate2 is useless, but setting it nevertheless was still faster than checking */
     } else {
@@ -321,8 +321,12 @@ LOADMOD_SOF_SINGLE_LABEL:
 
     if ((BitSent % 8) == 0) {
         /* Last SOF bit has been put out. Start sending out data */
-        StateRegister = LOADMOD_BIT0_SINGLE;
-        ShiftRegister = (*CodecBufferPtr++);
+        if (ByteCount == 0) {
+            StateRegister = LOADMOD_FINISHED;
+        } else {
+            StateRegister = LOADMOD_BIT0_SINGLE;
+            ShiftRegister = (*CodecBufferPtr++);
+        }
     } else {
         StateRegister = LOADMOD_SOF_SINGLE;
     }
@@ -403,8 +407,12 @@ LOADMOD_SOF_DUAL_LABEL:
 
     if ((BitSent % 8) == 0) {
         /* Last SOF bit has been put out. Start sending out data */
-        StateRegister = LOADMOD_BIT0_DUAL;
-        ShiftRegister = (*CodecBufferPtr++);
+        if (ByteCount == 0) {
+            StateRegister = LOADMOD_FINISHED;
+        } else {
+            StateRegister = LOADMOD_BIT0_DUAL;
+            ShiftRegister = (*CodecBufferPtr++);
+        }
     } else {
         StateRegister = LOADMOD_SOF_DUAL;
     }
@@ -618,6 +626,23 @@ void ISO15693CodecDeInit(void) {
     CodecSetLoadmodState(false);
 }
 
+void ISO15693StartEarlySend(bool bDualSubcarrier, uint16_t byteCount) {
+    // Buy a little more time to ready the responce (400 cycles == 14.7uS) before sending the SOF
+    CODEC_TIMER_LOADMOD.PER = ISO15693_T1_TIME + 200;
+
+    ByteCount = byteCount;
+    CodecBufferPtr = CodecBuffer;
+
+    /* Start loadmodulating */
+    if (bDualSubcarrier) {
+        CodecSetSubcarrier(CODEC_SUBCARRIERMOD_OOK, SUBCARRIER_2);
+        StateRegister = LOADMOD_START_DUAL;
+    } else {
+        CodecSetSubcarrier(CODEC_SUBCARRIERMOD_OOK, SUBCARRIER_1);
+        StateRegister = LOADMOD_START_SINGLE;
+    }
+}
+
 void ISO15693CodecTask(void) {
     if (Flags.DemodFinished) {
         Flags.DemodFinished = 0;
@@ -630,14 +655,19 @@ void ISO15693CodecTask(void) {
             LogEntry(LOG_INFO_CODEC_RX_DATA, CodecBuffer, DemodByteCount);
             LEDHook(LED_CODEC_RX, LED_PULSE);
 
-            if (CodecBuffer[0] & REQ_SUBCARRIER_DUAL) {
+            if (CodecBuffer[0] & REQ_SUBCARRIER_DUAL && ActiveConfiguration.TagFamily != TAG_FAMILY_ISO15693_ICLASS) {
                 bDualSubcarrier = true;
             }
+            LogEntry(LOG_INFO_GENERIC, "Test1", 5);
             AppReceivedByteCount = ApplicationProcess(CodecBuffer, DemodByteCount);
         }
 
         /* This is only reached when we've received a valid frame */
-        if (AppReceivedByteCount != ISO15693_APP_NO_RESPONSE) {
+        if (AppReceivedByteCount != ISO15693_APP_NO_RESPONSE && AppReceivedByteCount != ISO15693_APP_EARLY_SEND) {
+            if (AppReceivedByteCount == ISO15693_APP_SOF_ONLY) {
+                AppReceivedByteCount = 0;
+            }
+
             if (AppReceivedByteCount > CODEC_BUFFER_SIZE - ISO15693_CRC16_SIZE) { /* CRC would be written outside codec buffer */
                 CodecBuffer[ISO15693_ADDR_FLAGS] = ISO15693_RES_FLAG_ERROR;
                 CodecBuffer[ISO15693_RES_ADDR_PARAM] = ISO15693_RES_ERR_NOT_SUPP;
@@ -660,11 +690,14 @@ void ISO15693CodecTask(void) {
             }
 
             /* Calculate the CRC while modulation is already ongoing */
-            ISO15693AppendCRC(CodecBuffer, AppReceivedByteCount);
-            ByteCount += ISO15693_CRC16_SIZE; /* Increase this variable as it will be read by the codec during loadmodulation */
-            LogEntry(LOG_INFO_CODEC_TX_DATA, CodecBuffer, AppReceivedByteCount + ISO15693_CRC16_SIZE);
-
-        } else {
+            if (ActiveConfiguration.TagFamily != TAG_FAMILY_ISO15693_ICLASS && AppReceivedByteCount != 0) {
+                ISO15693AppendCRC(CodecBuffer, AppReceivedByteCount);
+                ByteCount += ISO15693_CRC16_SIZE; /* Increase this variable as it will be read by the codec during loadmodulation */
+                LogEntry(LOG_INFO_CODEC_TX_DATA, CodecBuffer, AppReceivedByteCount + ISO15693_CRC16_SIZE);
+            } else {
+                LogEntry(LOG_INFO_CODEC_TX_DATA, CodecBuffer, AppReceivedByteCount);
+            }
+        } else if (AppReceivedByteCount != ISO15693_APP_EARLY_SEND) {
             /* Overwrite the PERBUF register, which was configured in ISO15693_EOC, with the new appropriate value.
              * This is expecially needed because, since load modulation has not been performed, we're jumping here straight after
              * ISO15693_EOC. This implies that the data stored in the PERBUF register by ISO15693_EOC still has to be copied

@@ -23,6 +23,7 @@ SETTINGS 	+= -DCONFIG_NTAG215_SUPPORT
 # SETTINGS	+= -DCONFIG_TITAGITSTANDARD_SUPPORT
 # SETTINGS	+= -DCONFIG_EM4233_SUPPORT
 SETTINGS	+= -DCONFIG_ISO15693_SNIFF_SUPPORT
+#SETTINGS	+= -DCONFIG_ICLASS_SUPPORT
 
 #Support magic mode on mifare classic configuration
 SETTINGS    += -DSUPPORT_MF_CLASSIC_MAGIC_MODE
@@ -71,7 +72,7 @@ SETTINGS    += -DLED_SETTING_GLOBAL
 #Default logging mode
 SETTINGS    += -DDEFAULT_LOG_MODE=LOG_MODE_OFF
 #SETTINGS	+= -DDEFAULT_LOG_MODE=LOG_MODE_MEMORY
-#SETTINGS	+= -DDEFAULT_LOG_MODE=LOG_MODE_TERMINAL
+#SETTINGS	+= -DDEFAULT_LOG_MODE=LOG_MODE_LIVE
 
 #Define if log settings should be global
 SETTINGS    += -DLOG_SETTING_GLOBAL
@@ -114,7 +115,7 @@ SRC         += Terminal/Terminal.c Terminal/Commands.c Terminal/XModem.c Termina
 SRC         += Codec/Codec.c Codec/ISO14443-2A.c Codec/Reader14443-2A.c Codec/SniffISO14443-2A.c Codec/Reader14443-ISR.S
 SRC         += Application/MifareUltralight.c Application/MifareClassic.c Application/ISO14443-3A.c Application/Crypto1.c Application/Reader14443A.c Application/Sniff14443A.c Application/CryptoTDEA.S Application/NTAG215.c
 SRC         += Codec/ISO15693.c Codec/SniffISO15693.c
-SRC         += Application/Vicinity.c Application/Sl2s2002.c Application/TITagitstandard.c Application/ISO15693-A.c Application/EM4233.c Application/Sniff15693.c
+SRC         += Application/Vicinity.c Application/Sl2s2002.c Application/TITagitstandard.c Application/ISO15693-A.c Application/EM4233.c Application/Sniff15693.c Application/IClass.c
 SRC         += $(LUFA_SRC_USB) $(LUFA_SRC_USBCLASS)
 LUFA_PATH    = ../LUFA
 CC_FLAGS     = -flto -DUSE_LUFA_CONFIG_HEADER -DFLASH_DATA_ADDR=$(FLASH_DATA_ADDR) -DFLASH_DATA_SIZE=$(FLASH_DATA_SIZE) -DSPM_HELPER_ADDR=$(SPM_HELPER_ADDR) -DBUILD_DATE=$(BUILD_DATE) -DCOMMIT_ID=\"$(COMMIT_ID)\" $(SETTINGS)
@@ -134,6 +135,13 @@ AVRDUDE_FLAGS = -p $(AVRDUDE_MCU) -P $(AVRDUDE_PORT) -c $(AVRDUDE_PROGRAMMER)
 #AVRDUDE settings to program the precompiled firmware
 AVRDUDE_WRITE_APP_LATEST = -U application:w:Latest/Chameleon-RevG.hex
 AVRDUDE_WRITE_EEPROM_LATEST = -U eeprom:w:Latest/Chameleon-RevG.eep
+
+WSLENV ?= notwsl
+ifndef WSLENV
+DFU_PROG = ./dfu-programmer.exe
+else
+DFU_PROG = dfu-programmer
+endif
 
 .PHONY: program program-latest dfu-flip dfu-prog dfu-reset check_size style
 
@@ -183,10 +191,10 @@ dfu-flip: $(TARGET).hex $(TARGET).eep check_size
 
 # Program the device using dfu-programmer
 dfu-prog: $(TARGET).hex $(TARGET).eep check_size
-	dfu-programmer $(MCU) erase
-	dfu-programmer $(MCU) flash-eeprom $(TARGET).eep
-	dfu-programmer $(MCU) flash $(TARGET).hex
-	dfu-programmer $(MCU) reset
+	$(DFU_PROG) $(MCU) erase
+	$(DFU_PROG) $(MCU) flash-eeprom $(TARGET).eep
+	$(DFU_PROG) $(MCU) flash $(TARGET).hex
+	$(DFU_PROG) $(MCU) reset
 
 # Reset the device after firmware upgrade
 dfu-reset:

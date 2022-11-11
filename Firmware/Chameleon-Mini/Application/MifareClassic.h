@@ -16,6 +16,9 @@
 #define MIFARE_CLASSIC_1K_MEM_SIZE    1024
 #define MIFARE_CLASSIC_4K_MEM_SIZE    4096
 
+extern bool DetectionMode;
+void DetectionLogToFlash(uint8_t Entry, const void *Data, uint8_t Length);
+
 void DetectionInit(void);
 void DetectionLogClear(void);
 void MifareDetectionInit1K(void);
